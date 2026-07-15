@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ensardev/ssh-torpido/internal/lobby"
+	"github.com/ensardev/ssh-torpido/internal/players"
 	"github.com/ensardev/ssh-torpido/internal/server"
 	"github.com/ensardev/ssh-torpido/internal/ui"
 )
@@ -26,9 +27,11 @@ func main() {
 	}
 
 	// Local play runs its own in-process lobby, so `go run .` shows the same
-	// lobby-and-bots experience as connecting over SSH.
+	// lobby-and-bots experience as connecting over SSH. There's no SSH key
+	// locally, so the fingerprint is empty and stats aren't tracked.
 	lb := lobby.New()
-	p := tea.NewProgram(ui.NewRoot(lb, "sen", lipgloss.DefaultRenderer()), tea.WithAltScreen())
+	store, _ := players.Open("stats.json")
+	p := tea.NewProgram(ui.NewRoot(lb, "sen", "", store, lipgloss.DefaultRenderer()), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, "torpido crashed:", err)
 		os.Exit(1)

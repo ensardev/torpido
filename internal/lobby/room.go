@@ -25,6 +25,8 @@ const (
 type Seat struct {
 	Name    string
 	Human   bool
+	Wins    int // career wins, for display (human seats)
+	Losses  int // career losses, for display (human seats)
 	bot     *game.Bot
 	updates chan struct{} // signaled on state change (human seats only)
 }
@@ -116,5 +118,7 @@ type RoomInfo struct {
 	Tier        game.Difficulty
 	HasPassword bool
 	HostName    string
+	HostWins    int
+	HostLosses  int
 	Players     int
 }

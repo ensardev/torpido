@@ -39,8 +39,8 @@ func TestTwoPlayersTakeTurns(t *testing.T) {
 
 	r := lipgloss.DefaultRenderer()
 	en := i18n.For(i18n.EN)
-	ga := newGameModel(room, a, en, r)
-	gb := newGameModel(room, b, en, r)
+	ga := newGameModel(room, a, "", nil, en, r)
+	gb := newGameModel(room, b, "", nil, en, r)
 
 	if ga.phase != gameBattle || gb.phase != gameBattle {
 		t.Fatalf("both players should be in battle, got %v and %v", ga.phase, gb.phase)
@@ -80,7 +80,7 @@ func TestOpponentLeaveReturnsYouToWaiting(t *testing.T) {
 	placeFleet(room, game.SideB)
 
 	r := lipgloss.DefaultRenderer()
-	gb := newGameModel(room, b, i18n.For(i18n.EN), r)
+	gb := newGameModel(room, b, "", nil, i18n.For(i18n.EN), r)
 
 	// Ali leaves; Veli refreshes and should return to waiting, score wiped.
 	l.Leave(room, a)

@@ -32,7 +32,7 @@ func admiralCode(l *lobby.Lobby) string {
 // bot invariant restored.
 func TestEnterAndLeaveBotRoom(t *testing.T) {
 	l := lobby.New()
-	root := NewRoot(l, "sen", lipgloss.DefaultRenderer())
+	root := NewRoot(l, "sen", "", nil, lipgloss.DefaultRenderer())
 
 	seat := lobby.NewHumanSeat("sen")
 	room, err := l.JoinByCode(admiralCode(l), seat, "")

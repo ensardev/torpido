@@ -22,6 +22,9 @@ go.work.sum
 .env
 *.local
 
+# Persistent player stats
+stats.json
+
 # Editor
 .vscode/
 .idea/

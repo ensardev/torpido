@@ -175,14 +175,11 @@ func (l *Lobby) PublicRooms() []RoomInfo {
 				HostName: r.Tier.Name(), Players: 1,
 			})
 		case r.Kind == HumanRoom && !r.Private && r.waitingLocked():
-			host := ""
-			if r.seats[0] != nil {
-				host = r.seats[0].Name
+			info := RoomInfo{Code: r.Code, Kind: HumanRoom, HasPassword: r.Password != "", Players: 1}
+			if host := r.seats[0]; host != nil {
+				info.HostName, info.HostWins, info.HostLosses = host.Name, host.Wins, host.Losses
 			}
-			out = append(out, RoomInfo{
-				Code: r.Code, Kind: HumanRoom,
-				HasPassword: r.Password != "", HostName: host, Players: 1,
-			})
+			out = append(out, info)
 		}
 		r.mu.Unlock()
 	}

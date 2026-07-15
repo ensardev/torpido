@@ -22,14 +22,20 @@ import (
 	"github.com/charmbracelet/wish/activeterm"
 	bm "github.com/charmbracelet/wish/bubbletea"
 	"github.com/charmbracelet/wish/logging"
+	gossh "golang.org/x/crypto/ssh"
 
 	"github.com/ensardev/ssh-torpido/internal/lobby"
+	"github.com/ensardev/ssh-torpido/internal/players"
 	"github.com/ensardev/ssh-torpido/internal/ui"
 )
 
 // hostKeyPath is where the server's SSH identity lives. It is generated on first
-// run and is gitignored — never commit it.
-const hostKeyPath = ".ssh/torpido_ed25519"
+// run and is gitignored — never commit it. statsPath is the persistent player
+// record.
+const (
+	hostKeyPath = ".ssh/torpido_ed25519"
+	statsPath   = "stats.json"
+)
 
 // Run starts the SSH server on addr (e.g. ":2222") and blocks until the process
 // receives an interrupt, then shuts down gracefully.
@@ -42,14 +48,24 @@ func Run(addr string) error {
 	// One lobby is shared by every connection, so players meet in the same rooms.
 	lb := lobby.New()
 
+	// Persistent player records (nicknames + win/loss), keyed by SSH key.
+	store, err := players.Open(statsPath)
+	if err != nil {
+		return err
+	}
+
 	srv, err := wish.NewServer(
 		wish.WithAddress(addr),
 		wish.WithHostKeyPath(hostKeyPath),
+		// Accept any key (it's the player's identity, not a gate) and also let
+		// keyless clients in as guests, so connecting stays zero-friction.
+		wish.WithPublicKeyAuth(func(ssh.Context, ssh.PublicKey) bool { return true }),
+		wish.WithKeyboardInteractiveAuth(func(ssh.Context, gossh.KeyboardInteractiveChallenge) bool { return true }),
 		wish.WithMiddleware(
 			// Order matters: middleware runs bottom-to-top on the way in.
-			bm.Middleware(teaHandler(lb)), // run the Bubble Tea app
-			activeterm.Middleware(),       // reject connections without a real terminal
-			logging.Middleware(),          // log who connects
+			bm.Middleware(teaHandler(lb, store)), // run the Bubble Tea app
+			activeterm.Middleware(),               // reject connections without a real terminal
+			logging.Middleware(),                  // log who connects
 		),
 	)
 	if err != nil {
@@ -76,14 +92,40 @@ func Run(addr string) error {
 // teaHandler builds the lobby-backed app for each incoming SSH session. It gives
 // the UI a renderer bound to *this* session's terminal, so colors match the
 // player's terminal instead of the server's.
-func teaHandler(lb *lobby.Lobby) bm.Handler {
+func teaHandler(lb *lobby.Lobby, store *players.Store) bm.Handler {
 	return func(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 		renderer := bm.MakeRenderer(s)
-		return ui.NewRoot(lb, playerName(s), renderer), []tea.ProgramOption{tea.WithAltScreen()}
+		fp, nick := identity(s)
+		if fp != "" {
+			// Remember this player; use their saved nickname if they have one.
+			if rec, ok := store.Get(fp); ok && rec.Nick != "" {
+				nick = rec.Nick
+			} else {
+				store.Ensure(fp, nick)
+			}
+		}
+		return ui.NewRoot(lb, nick, fp, store, renderer), []tea.ProgramOption{tea.WithAltScreen()}
 	}
 }
 
-// playerName is the display name for a connection, taken from the SSH username.
+// identity derives a persistent fingerprint (from the SSH key) and a default
+// display name (from the username) for a connection. Keyless guests get an empty
+// fingerprint, so their stats simply aren't tracked.
+func identity(s ssh.Session) (fingerprint, nick string) {
+	nick = playerName(s)
+	switch {
+	case s.PublicKey() != nil:
+		// Preferred: the SSH key is a strong, stable identity.
+		fingerprint = gossh.FingerprintSHA256(s.PublicKey())
+	case s.User() != "":
+		// Keyless fallback: the username. Weaker (anyone can pick it), but it
+		// lets stats work without a key.
+		fingerprint = "user:" + s.User()
+	}
+	return fingerprint, nick
+}
+
+// playerName is the default display name for a connection, from the SSH username.
 func playerName(s ssh.Session) string {
 	if u := s.User(); u != "" && u != "root" {
 		return u

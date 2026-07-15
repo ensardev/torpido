@@ -12,6 +12,7 @@ import (
 	"github.com/ensardev/ssh-torpido/internal/game"
 	"github.com/ensardev/ssh-torpido/internal/i18n"
 	"github.com/ensardev/ssh-torpido/internal/lobby"
+	"github.com/ensardev/ssh-torpido/internal/players"
 )
 
 // lobbyRefresh is how often the room list is refreshed so new rooms appear.
@@ -35,6 +36,8 @@ const (
 type lobbyModel struct {
 	lobby    *lobby.Lobby
 	name     string
+	fp       string
+	store    *players.Store
 	t        i18n.Strings
 	renderer *lipgloss.Renderer
 	styles   styles
@@ -47,10 +50,12 @@ type lobbyModel struct {
 	input string
 }
 
-func newLobbyModel(l *lobby.Lobby, name string, t i18n.Strings, r *lipgloss.Renderer) lobbyModel {
+func newLobbyModel(l *lobby.Lobby, name, fp string, store *players.Store, t i18n.Strings, r *lipgloss.Renderer) lobbyModel {
 	m := lobbyModel{
 		lobby:    l,
 		name:     name,
+		fp:       fp,
+		store:    store,
 		t:        t,
 		renderer: r,
 		styles:   newStyles(r),
@@ -85,7 +90,15 @@ func lobbyTick() tea.Cmd {
 
 func (m lobbyModel) Init() tea.Cmd { return lobbyTick() }
 
-func (m lobbyModel) newSeat() *lobby.Seat { return lobby.NewHumanSeat(m.name) }
+func (m lobbyModel) newSeat() *lobby.Seat {
+	seat := lobby.NewHumanSeat(m.name)
+	if m.fp != "" && m.store != nil {
+		if rec, ok := m.store.Get(m.fp); ok {
+			seat.Wins, seat.Losses = rec.Wins, rec.Losses
+		}
+	}
+	return seat
+}
 
 func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -240,9 +253,13 @@ func (m lobbyModel) View() string {
 			if host == "" {
 				host = m.t.LPlayer
 			}
-			line = fmt.Sprintf("%s⚔ %s %s",
+			record := ""
+			if info.HostWins+info.HostLosses > 0 {
+				record = s.tag.Render(fmt.Sprintf(" (%d/%d)", info.HostWins, info.HostLosses))
+			}
+			line = fmt.Sprintf("%s⚔ %s %s%s",
 				lock, s.logo.Render(info.Code),
-				s.dim.Render(fmt.Sprintf(m.t.LHumanWaitingFmt, host, info.Players)))
+				s.dim.Render(fmt.Sprintf(m.t.LHumanWaitingFmt, host, info.Players)), record)
 		}
 		if i == m.cursor {
 			line = s.rosterNow.Render("▸ " + strings.TrimPrefix(line, " "))

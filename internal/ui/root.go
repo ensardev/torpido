@@ -5,6 +5,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ensardev/ssh-torpido/internal/i18n"
 	"github.com/ensardev/ssh-torpido/internal/lobby"
+	"github.com/ensardev/ssh-torpido/internal/players"
 )
 
 type rootScreen int
@@ -20,6 +21,8 @@ const (
 type Root struct {
 	lobby    *lobby.Lobby
 	name     string
+	fp       string
+	store    *players.Store
 	renderer *lipgloss.Renderer
 
 	lang   i18n.Lang
@@ -35,11 +38,15 @@ type Root struct {
 	seat *lobby.Seat
 }
 
-// NewRoot returns the model a connection starts with: the welcome screen.
-func NewRoot(l *lobby.Lobby, name string, renderer *lipgloss.Renderer) Root {
+// NewRoot returns the model a connection starts with: the welcome screen. fp is
+// the player's SSH-key fingerprint (empty for keyless guests) and store is the
+// shared persistent player record.
+func NewRoot(l *lobby.Lobby, name, fp string, store *players.Store, renderer *lipgloss.Renderer) Root {
 	return Root{
 		lobby:    l,
 		name:     name,
+		fp:       fp,
+		store:    store,
 		renderer: renderer,
 		lang:     i18n.EN,
 		t:        i18n.For(i18n.EN),
@@ -67,13 +74,13 @@ func (m Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case startLobbyMsg:
 		m.lang = msg.lang
 		m.t = i18n.For(msg.lang)
-		m.lobbyM = newLobbyModel(m.lobby, m.name, m.t, m.renderer)
+		m.lobbyM = newLobbyModel(m.lobby, m.name, m.fp, m.store, m.t, m.renderer)
 		m.screen = rootLobby
 		return m, m.lobbyM.Init()
 
 	case enterRoomMsg:
 		m.room, m.seat = msg.room, msg.seat
-		m.gameM = newGameModel(msg.room, msg.seat, m.t, m.renderer)
+		m.gameM = newGameModel(msg.room, msg.seat, m.fp, m.store, m.t, m.renderer)
 		m.screen = rootGame
 		return m, m.gameM.Init()
 
@@ -82,7 +89,7 @@ func (m Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.lobby.Leave(m.room, m.seat)
 			m.room, m.seat = nil, nil
 		}
-		m.lobbyM = newLobbyModel(m.lobby, m.name, m.t, m.renderer)
+		m.lobbyM = newLobbyModel(m.lobby, m.name, m.fp, m.store, m.t, m.renderer)
 		m.screen = rootLobby
 		return m, m.lobbyM.Init()
 	}

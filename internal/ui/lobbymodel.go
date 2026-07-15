@@ -17,19 +17,19 @@ const lobbyRefresh = 2 * time.Second
 
 type lobbyTickMsg time.Time
 
-// enterBotGameMsg tells the root model to start a game in a bot room the player
-// just joined.
-type enterBotGameMsg struct {
-	difficulty game.Difficulty
-	room       *lobby.Room
-	seat       *lobby.Seat
-}
-
 // lobbyNoticeMsg carries a transient message to show in the lobby.
 type lobbyNoticeMsg string
 
+// lobbyMode is whether the lobby is browsing rooms or typing an invite code.
+type lobbyMode int
+
+const (
+	modeBrowse lobbyMode = iota
+	modeJoinCode
+)
+
 // lobbyModel is the screen a player sees after connecting: the list of joinable
-// rooms and how to enter one.
+// rooms and the actions to enter one.
 type lobbyModel struct {
 	lobby    *lobby.Lobby
 	name     string
@@ -39,6 +39,9 @@ type lobbyModel struct {
 	rooms  []lobby.RoomInfo
 	cursor int
 	notice string
+
+	mode  lobbyMode
+	input string
 }
 
 func newLobbyModel(l *lobby.Lobby, name string, r *lipgloss.Renderer) lobbyModel {
@@ -54,7 +57,6 @@ func newLobbyModel(l *lobby.Lobby, name string, r *lipgloss.Renderer) lobbyModel
 
 func (m *lobbyModel) refresh() {
 	m.rooms = m.lobby.PublicRooms()
-	// Stable order: bot rooms by tier first, then human rooms by code.
 	sort.SliceStable(m.rooms, func(i, j int) bool {
 		a, b := m.rooms[i], m.rooms[j]
 		if a.Kind != b.Kind {
@@ -79,6 +81,9 @@ func lobbyTick() tea.Cmd {
 
 func (m lobbyModel) Init() tea.Cmd { return lobbyTick() }
 
+// newSeat makes this player's seat for a room they're about to enter.
+func (m lobbyModel) newSeat() *lobby.Seat { return lobby.NewHumanSeat(m.name) }
+
 func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case lobbyTickMsg:
@@ -88,24 +93,61 @@ func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.notice = string(msg)
 		return m, nil
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-			m.notice = ""
-		case "down", "j":
-			if m.cursor < len(m.rooms)-1 {
-				m.cursor++
-			}
-			m.notice = ""
-		case "enter", " ":
-			return m.selectRoom()
-		case "c", "h", "g":
-			// Create / quick-match / join-by-code arrive in the next step.
-			m.notice = "İnsan-vs-insan sıradaki adımda geliyor 🔜"
+		if m.mode == modeJoinCode {
+			return m.updateJoinCode(msg)
+		}
+		return m.updateBrowse(msg)
+	}
+	return m, nil
+}
+
+func (m lobbyModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// The lobby is a menu, so it navigates with the arrow keys and reserves the
+	// letters for actions (unlike the game, which uses hjkl to move).
+	switch msg.String() {
+	case "ctrl+c", "q":
+		return m, tea.Quit
+	case "up":
+		if m.cursor > 0 {
+			m.cursor--
+		}
+		m.notice = ""
+	case "down":
+		if m.cursor < len(m.rooms)-1 {
+			m.cursor++
+		}
+		m.notice = ""
+	case "enter", " ":
+		return m.selectRoom()
+	case "c":
+		return m.createRoom()
+	case "h":
+		return m.quickMatch()
+	case "k":
+		m.mode = modeJoinCode
+		m.input = ""
+		m.notice = ""
+	}
+	return m, nil
+}
+
+func (m lobbyModel) updateJoinCode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		m.mode = modeBrowse
+		m.input = ""
+	case "enter":
+		code := m.input
+		m.mode = modeBrowse
+		m.input = ""
+		return m.joinByCode(code)
+	case "backspace":
+		if len(m.input) > 0 {
+			m.input = m.input[:len(m.input)-1]
+		}
+	default:
+		if len(msg.String()) == 1 && len(m.input) < 4 {
+			m.input += strings.ToUpper(msg.String())
 		}
 	}
 	return m, nil
@@ -116,19 +158,37 @@ func (m lobbyModel) selectRoom() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	info := m.rooms[m.cursor]
-	if info.Kind != lobby.BotRoom {
-		m.notice = "İnsan odaları sıradaki adımda oynanabilir olacak 🔜"
+	if info.HasPassword {
+		m.notice = "Şifreli oda — şifre girişi sıradaki adımda geliyor 🔜"
 		return m, nil
 	}
+	return m.joinByCode(info.Code)
+}
 
-	l, name, tier, code := m.lobby, m.name, info.Tier, info.Code
+func (m lobbyModel) joinByCode(code string) (tea.Model, tea.Cmd) {
+	l, seat := m.lobby, m.newSeat()
 	return m, func() tea.Msg {
-		seat := lobby.NewHumanSeat(name)
 		room, err := l.JoinByCode(code, seat, "")
 		if err != nil {
 			return lobbyNoticeMsg(err.Error())
 		}
-		return enterBotGameMsg{difficulty: tier, room: room, seat: seat}
+		return enterRoomMsg{room: room, seat: seat}
+	}
+}
+
+func (m lobbyModel) createRoom() (tea.Model, tea.Cmd) {
+	l, seat := m.lobby, m.newSeat()
+	return m, func() tea.Msg {
+		room := l.CreateRoom(seat, "", true) // private: joinable only by its code
+		return enterRoomMsg{room: room, seat: seat}
+	}
+}
+
+func (m lobbyModel) quickMatch() (tea.Model, tea.Cmd) {
+	l, seat := m.lobby, m.newSeat()
+	return m, func() tea.Msg {
+		room := l.QuickMatch(seat)
+		return enterRoomMsg{room: room, seat: seat}
 	}
 }
 
@@ -170,7 +230,7 @@ func (m lobbyModel) View() string {
 				s.dim.Render(fmt.Sprintf("%s · %d/2 bekliyor", host, info.Players)))
 		}
 		if i == m.cursor {
-			line = s.rosterNow.Render("▸ " + stripLeadingSpace(line))
+			line = s.rosterNow.Render("▸ " + strings.TrimPrefix(line, " "))
 		} else {
 			line = "  " + line
 		}
@@ -179,8 +239,12 @@ func (m lobbyModel) View() string {
 	if len(rows) == 0 {
 		rows = append(rows, s.dim.Render("  (oda yok)"))
 	}
-
 	list := s.box.Render(strings.Join(rows, "\n"))
+
+	footer := s.help.Render("↑↓ seç · enter gir · c oda kur · h hızlı eşleş · k kodla katıl · q çık")
+	if m.mode == modeJoinCode {
+		footer = s.badgeYou.Render("KOD: "+m.input+"_") + "  " + s.help.Render("harfleri yaz · enter katıl · esc iptal")
+	}
 
 	notice := ""
 	if m.notice != "" {
@@ -190,15 +254,10 @@ func (m lobbyModel) View() string {
 	body := lipgloss.JoinVertical(lipgloss.Left,
 		s.header(),
 		"",
-		s.dim.Render("AÇIK ODALAR — bir bot seç ve oyna:"),
+		s.dim.Render("AÇIK ODALAR:"),
 		list,
 		"",
-		notice+s.help.Render("↑↓ seç · enter gir · c oda kur · h hızlı eşleş · q çık"),
+		notice+footer,
 	)
-	return lipgloss.NewStyle().Padding(1, 2).Render(body)
-}
-
-// stripLeadingSpace trims one leading space so the cursor arrow lines up.
-func stripLeadingSpace(sline string) string {
-	return strings.TrimPrefix(sline, " ")
+	return screen(body)
 }

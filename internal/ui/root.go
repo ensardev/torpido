@@ -15,7 +15,7 @@ type Root struct {
 
 	inGame bool
 	lobbyM lobbyModel
-	gameM  Model
+	gameM  gameModel
 
 	// the room/seat the player currently occupies, so we can free it on leave
 	room *lobby.Room
@@ -32,6 +32,13 @@ func NewRoot(l *lobby.Lobby, name string, renderer *lipgloss.Renderer) Root {
 	}
 }
 
+// enterRoomMsg tells the root to open the game screen for a room the player has
+// just been seated in (as a bot game, a created room, or a joined match).
+type enterRoomMsg struct {
+	room *lobby.Room
+	seat *lobby.Seat
+}
+
 // leaveGameMsg asks the root to end the current game and return to the lobby.
 type leaveGameMsg struct{}
 
@@ -41,9 +48,9 @@ func (m Root) Init() tea.Cmd { return m.lobbyM.Init() }
 
 func (m Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case enterBotGameMsg:
+	case enterRoomMsg:
 		m.room, m.seat = msg.room, msg.seat
-		m.gameM = NewBotGame(msg.difficulty, m.renderer)
+		m.gameM = newGameModel(msg.room, msg.seat, m.renderer)
 		m.inGame = true
 		return m, m.gameM.Init()
 
@@ -59,7 +66,7 @@ func (m Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if m.inGame {
 		gm, cmd := m.gameM.Update(msg)
-		m.gameM = gm.(Model)
+		m.gameM = gm.(gameModel)
 		return m, cmd
 	}
 	lm, cmd := m.lobbyM.Update(msg)

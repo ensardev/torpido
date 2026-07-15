@@ -40,7 +40,7 @@ func TestEnterAndLeaveBotRoom(t *testing.T) {
 		t.Fatalf("joining the Admiral room failed: %v", err)
 	}
 
-	updated, _ := root.Update(enterBotGameMsg{difficulty: game.Admiral, room: room, seat: seat})
+	updated, _ := root.Update(enterRoomMsg{room: room, seat: seat})
 	root = updated.(Root)
 	if !root.inGame {
 		t.Fatal("root should be in game after entering a bot room")

@@ -8,19 +8,10 @@ import (
 	"github.com/ensardev/torpido/internal/game"
 )
 
-// View renders the current screen. It is the single entry point Bubble Tea
-// calls; it just dispatches to the right screen for the current phase.
-func (m Model) View() string {
-	switch m.phase {
-	case phasePlacement:
-		return m.viewPlacement()
-	case phaseBattle:
-		return m.viewBattle()
-	case phaseGameOver:
-		return m.viewGameOver()
-	}
-	return ""
-}
+// This file holds the shared drawing helpers used by every screen. They take
+// value-copy grids (never a live board), so rendering is always race-free.
+
+type grid = [game.BoardSize][game.BoardSize]game.Cell
 
 // coordName turns a coord into its player-facing name, e.g. {0,0} -> "A1".
 func coordName(c game.Coord) string {
@@ -46,14 +37,12 @@ func (s styles) cellBlock(c game.Cell) string {
 // renderBoard draws a 10x10 grid with A-J column and 1-10 row labels. Squares
 // are drawn edge-to-edge (2 columns each) so ships and the sea look solid.
 //
-//   - reveal shows un-hit ships (use for your own board, not the enemy's).
 //   - aim, if set, highlights the targeting reticle (enemy board only).
 //   - preview, if set, highlights where a ship is about to be placed;
 //     previewValid tints it green (fits) or red (blocked).
-func (s styles) renderBoard(b *game.Board, reveal bool, aim *game.Coord, preview map[game.Coord]bool, previewValid bool) string {
+func (s styles) renderBoard(g grid, aim *game.Coord, preview map[game.Coord]bool, previewValid bool) string {
 	var sb strings.Builder
 
-	// Column header: A B C ... aligned to the 2-wide squares.
 	sb.WriteString("   ")
 	for c := 0; c < game.BoardSize; c++ {
 		sb.WriteString(s.dim.Render(fmt.Sprintf("%-2s", string(rune('A'+c)))))
@@ -74,7 +63,7 @@ func (s styles) renderBoard(b *game.Board, reveal bool, aim *game.Coord, preview
 			case aim != nil && *aim == coord:
 				sb.WriteString(s.aim.Render("◎ "))
 			default:
-				sb.WriteString(s.cellBlock(b.StateAt(coord, reveal)))
+				sb.WriteString(s.cellBlock(g[r][c]))
 			}
 		}
 		sb.WriteString("\n")
@@ -84,7 +73,7 @@ func (s styles) renderBoard(b *game.Board, reveal bool, aim *game.Coord, preview
 }
 
 // boardPanel stacks a caption above a bordered board.
-func (s styles) boardPanel(caption, board string) string {
+func (s styles) boardPanel(caption string, board string) string {
 	return lipgloss.JoinVertical(lipgloss.Center, s.dim.Render(caption), s.box.Render(board))
 }
 
@@ -100,100 +89,7 @@ func (s styles) legend() string {
 		s.miss.Render("○ ") + s.dim.Render(" ıska")
 }
 
-func (m Model) viewPlacement() string {
-	s := m.styles
-	st := m.fleet[m.placeIndex]
-	coords := game.ShipCoords(m.cursor, st.Size, m.orientation)
-	valid := m.player.CanPlace(coords)
-	preview := make(map[game.Coord]bool, len(coords))
-	for _, c := range coords {
-		preview[c] = true
-	}
-
-	orient := "yatay"
-	if m.orientation == game.Vertical {
-		orient = "dikey"
-	}
-
-	// Roster of ships: done ones ticked, current one highlighted, rest dimmed.
-	var roster []string
-	for i, sh := range m.fleet {
-		label := fmt.Sprintf("%s (%d)", sh.Name, sh.Size)
-		switch {
-		case i < m.placeIndex:
-			roster = append(roster, s.rosterDone.Render("✔ "+label))
-		case i == m.placeIndex:
-			roster = append(roster, s.rosterNow.Render(label))
-		default:
-			roster = append(roster, s.rosterTodo.Render(label))
-		}
-	}
-
-	help := s.help.Render(fmt.Sprintf(
-		"ok tuşları/hjkl taşı · r döndür (%s) · enter yerleştir · q lobiye dön", orient))
-
-	body := lipgloss.JoinVertical(lipgloss.Left,
-		s.header(),
-		"",
-		s.dim.Render("Donanmanı yerleştir:"),
-		strings.Join(roster, "   "),
-		"",
-		s.boardPanel("SENİN SULARIN", s.renderBoard(m.player, true, nil, preview, valid)),
-		"",
-		s.legend(),
-		"",
-		help,
-	)
-	return lipgloss.NewStyle().Padding(1, 2).Render(body)
-}
-
-func (m Model) viewBattle() string {
-	s := m.styles
-	var aim *game.Coord
-	if !m.waiting {
-		aim = &m.aim
-	}
-	own := s.boardPanel("SENİN SULARIN", s.renderBoard(m.player, true, nil, nil, false))
-	enemy := s.boardPanel("DÜŞMAN SULARI", s.renderBoard(m.enemy, false, aim, nil, false))
-	boards := lipgloss.JoinHorizontal(lipgloss.Top, own, "    ", enemy)
-
-	turn := s.badgeYou.Render("SIRA: SEN")
-	if m.waiting {
-		turn = s.badgeFoe.Render("DÜŞMAN NİŞAN ALIYOR…")
-	}
-
-	body := lipgloss.JoinVertical(lipgloss.Left,
-		s.header()+"  "+s.tag.Render("· "+m.difficulty.Name()+"'e karşı"),
-		"",
-		turn+"   "+m.message,
-		"",
-		boards,
-		"",
-		s.legend(),
-		"",
-		s.help.Render("ok tuşları/hjkl nişan al · enter ateş · q lobiye dön"),
-	)
-	return lipgloss.NewStyle().Padding(1, 2).Render(body)
-}
-
-func (m Model) viewGameOver() string {
-	s := m.styles
-	banner := s.win.Render("★  ZAFER  ★")
-	if !m.playerWon {
-		banner = s.lose.Render("✖  MAĞLUBİYET  ✖")
-	}
-	own := s.boardPanel("SENİN SULARIN", s.renderBoard(m.player, true, nil, nil, false))
-	enemy := s.boardPanel("DÜŞMAN SULARI", s.renderBoard(m.enemy, true, nil, nil, false))
-	boards := lipgloss.JoinHorizontal(lipgloss.Top, own, "    ", enemy)
-
-	body := lipgloss.JoinVertical(lipgloss.Left,
-		s.header(),
-		"",
-		banner+"   "+m.message,
-		"",
-		boards,
-		"",
-		s.help.Render("enter/q lobiye dön"),
-	)
+// screen wraps a screen body with the standard outer padding.
+func screen(body string) string {
 	return lipgloss.NewStyle().Padding(1, 2).Render(body)
 }

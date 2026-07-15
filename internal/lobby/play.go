@@ -11,6 +11,7 @@ type Snapshot struct {
 	Phase      game.MatchPhase
 	You        [game.BoardSize][game.BoardSize]game.Cell // your board, ships shown
 	Enemy      [game.BoardSize][game.BoardSize]game.Cell // enemy board, ships hidden
+	EnemyFull  [game.BoardSize][game.BoardSize]game.Cell // enemy board revealed (for game over)
 	YourTurn   bool
 	YouPlaced  bool
 	OppPlaced  bool
@@ -99,6 +100,7 @@ func (r *Room) Snapshot(side game.Side) Snapshot {
 		Phase:      m.Phase(),
 		You:        m.Board(side).Grid(true),
 		Enemy:      m.Board(side.Other()).Grid(false),
+		EnemyFull:  m.Board(side.Other()).Grid(true),
 		YourTurn:   m.Phase() == game.MatchBattle && m.Turn() == side,
 		YouPlaced:  m.Placed(side),
 		OppPlaced:  m.Placed(side.Other()),

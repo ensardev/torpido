@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/ensardev/ssh-torpido/internal/game"
+	"github.com/ensardev/ssh-torpido/internal/players"
 )
 
 // Kind is whether a room hosts a human opponent or a waiting bot.
@@ -23,12 +24,13 @@ const (
 
 // Seat is one participant in a room. Exactly one of Human / bot is set.
 type Seat struct {
-	Name    string
-	Human   bool
-	Wins    int // career wins, for display (human seats)
-	Losses  int // career losses, for display (human seats)
-	bot     *game.Bot
-	updates chan struct{} // signaled on state change (human seats only)
+	Name        string
+	Human       bool
+	Fingerprint string // persistent identity, for recording W/L (human seats)
+	Wins        int    // career wins, for display (human seats)
+	Losses      int    // career losses, for display (human seats)
+	bot         *game.Bot
+	updates     chan struct{} // signaled on state change (human seats only)
 }
 
 // NewHumanSeat makes a seat for a connected player.
@@ -53,10 +55,11 @@ type Room struct {
 	mu          sync.Mutex
 	match       *game.Match
 	seats       [2]*Seat
-	score       [2]int  // wins per side across rematches
-	rematchWant [2]bool // which sides asked for a rematch
-	curScored   bool    // has the current finished match been counted yet?
-	matchNo     int     // increments each rematch, so the UI can reset locals
+	score       [2]int         // wins per side across rematches
+	rematchWant [2]bool        // which sides asked for a rematch
+	curScored   bool           // has the current finished match been counted yet?
+	matchNo     int            // increments each rematch, so the UI can reset locals
+	store       *players.Store // persistent W/L, shared from the lobby
 }
 
 // --- helpers below assume the room's mutex is held ---

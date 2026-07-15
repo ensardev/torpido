@@ -51,7 +51,7 @@ func NewRoot(l *lobby.Lobby, name, fp string, store *players.Store, renderer *li
 		lang:     i18n.EN,
 		t:        i18n.For(i18n.EN),
 		screen:   rootWelcome,
-		welcomeM: newWelcomeModel(i18n.EN, renderer),
+		welcomeM: newWelcomeModel(i18n.EN, name, fp, store, renderer),
 	}
 }
 
@@ -71,6 +71,10 @@ func (m Root) Init() tea.Cmd { return m.welcomeM.Init() }
 
 func (m Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case setNickMsg:
+		m.name = msg.nick // use the new nickname for future rooms
+		return m, nil
+
 	case startLobbyMsg:
 		m.lang = msg.lang
 		m.t = i18n.For(msg.lang)
@@ -80,7 +84,7 @@ func (m Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case enterRoomMsg:
 		m.room, m.seat = msg.room, msg.seat
-		m.gameM = newGameModel(msg.room, msg.seat, m.fp, m.store, m.t, m.renderer)
+		m.gameM = newGameModel(msg.room, msg.seat, m.t, m.renderer)
 		m.screen = rootGame
 		return m, m.gameM.Init()
 

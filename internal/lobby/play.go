@@ -148,9 +148,24 @@ func (r *Room) scoreIfEndedLocked() {
 	if r.curScored {
 		return
 	}
-	if w, over := r.match.Winner(); over {
-		r.score[w]++
-		r.curScored = true
+	w, over := r.match.Winner()
+	if !over {
+		return
+	}
+	r.score[w]++
+	r.curScored = true
+
+	// Persist career W/L for human-vs-human matches only (bots don't count).
+	if r.store == nil || r.Kind != HumanRoom {
+		return
+	}
+	if ws := r.seats[w]; ws != nil && ws.Fingerprint != "" {
+		r.store.RecordResult(ws.Fingerprint, true)
+		ws.Wins++
+	}
+	if ls := r.seats[w.Other()]; ls != nil && ls.Fingerprint != "" {
+		r.store.RecordResult(ls.Fingerprint, false)
+		ls.Losses++
 	}
 }
 

@@ -10,7 +10,7 @@ import (
 // an opponent joins, plays and leaves, the remaining player's room must reset to
 // a fresh waiting room (score wiped) and be re-listed for a new opponent.
 func TestOpponentLeaveReturnsHostToWaiting(t *testing.T) {
-	l := New()
+	l := New(nil)
 	a := NewHumanSeat("Ali")
 	room := l.CreateRoom(a, "", false) // public
 	b := NewHumanSeat("Veli")

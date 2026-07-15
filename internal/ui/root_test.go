@@ -31,7 +31,7 @@ func admiralCode(l *lobby.Lobby) string {
 // loop: lobby -> bot game -> back to lobby, and checks the room is freed and the
 // bot invariant restored.
 func TestEnterAndLeaveBotRoom(t *testing.T) {
-	l := lobby.New()
+	l := lobby.New(nil)
 	root := NewRoot(l, "sen", "", nil, lipgloss.DefaultRenderer())
 
 	seat := lobby.NewHumanSeat("sen")

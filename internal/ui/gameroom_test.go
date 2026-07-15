@@ -26,7 +26,7 @@ func placeFleet(room *lobby.Room, side game.Side) {
 // core loop: SideA fires, and after SideB refreshes (as its update channel would
 // make it), the turn has passed and the shot shows on SideB's board.
 func TestTwoPlayersTakeTurns(t *testing.T) {
-	l := lobby.New()
+	l := lobby.New(nil)
 	a := lobby.NewHumanSeat("Ali")
 	room := l.CreateRoom(a, "", false)
 	b := lobby.NewHumanSeat("Veli")
@@ -39,8 +39,8 @@ func TestTwoPlayersTakeTurns(t *testing.T) {
 
 	r := lipgloss.DefaultRenderer()
 	en := i18n.For(i18n.EN)
-	ga := newGameModel(room, a, "", nil, en, r)
-	gb := newGameModel(room, b, "", nil, en, r)
+	ga := newGameModel(room, a, en, r)
+	gb := newGameModel(room, b, en, r)
 
 	if ga.phase != gameBattle || gb.phase != gameBattle {
 		t.Fatalf("both players should be in battle, got %v and %v", ga.phase, gb.phase)
@@ -71,7 +71,7 @@ func TestTwoPlayersTakeTurns(t *testing.T) {
 // TestOpponentLeaveReturnsYouToWaiting checks that when the opponent leaves, the
 // remaining player drops back to a fresh waiting room instead of being stuck.
 func TestOpponentLeaveReturnsYouToWaiting(t *testing.T) {
-	l := lobby.New()
+	l := lobby.New(nil)
 	a := lobby.NewHumanSeat("Ali")
 	room := l.CreateRoom(a, "", false)
 	b := lobby.NewHumanSeat("Veli")
@@ -80,7 +80,7 @@ func TestOpponentLeaveReturnsYouToWaiting(t *testing.T) {
 	placeFleet(room, game.SideB)
 
 	r := lipgloss.DefaultRenderer()
-	gb := newGameModel(room, b, "", nil, i18n.For(i18n.EN), r)
+	gb := newGameModel(room, b, i18n.For(i18n.EN), r)
 
 	// Ali leaves; Veli refreshes and should return to waiting, score wiped.
 	l.Leave(room, a)

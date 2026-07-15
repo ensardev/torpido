@@ -7,8 +7,8 @@ type Difficulty int
 
 const (
 	Rookie  Difficulty = iota // fires at random, never follows up on a hit
-	Admiral                    // hunt & target: works outwards from each hit
-	SeaWolf                    // hunt & target, but hunts on a parity grid to find ships faster
+	Admiral                   // hunt & target: works outwards from each hit
+	SeaWolf                   // hunt & target, but hunts on a parity grid to find ships faster
 )
 
 // Name is the bot's display name for its difficulty.

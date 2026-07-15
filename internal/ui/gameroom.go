@@ -9,7 +9,6 @@ import (
 	"github.com/ensardev/ssh-torpido/internal/game"
 	"github.com/ensardev/ssh-torpido/internal/i18n"
 	"github.com/ensardev/ssh-torpido/internal/lobby"
-	"github.com/ensardev/ssh-torpido/internal/players"
 )
 
 // botDelay is the pause before a bot fires back, so its move is readable.
@@ -66,8 +65,6 @@ type gameModel struct {
 	seat     *lobby.Seat
 	side     game.Side
 	oppIsBot bool
-	fp       string
-	store    *players.Store
 	t        i18n.Strings
 	renderer *lipgloss.Renderer
 	styles   styles
@@ -82,24 +79,21 @@ type gameModel struct {
 	orientation game.Orientation
 
 	// battle state
-	aim            game.Coord
-	message        string
-	boom           *boomOverlay
-	curMatchNo     int
-	recordedMatchNo int
+	aim        game.Coord
+	message    string
+	boom       *boomOverlay
+	curMatchNo int
 
 	width, height int
 }
 
-func newGameModel(room *lobby.Room, seat *lobby.Seat, fp string, store *players.Store, t i18n.Strings, r *lipgloss.Renderer) gameModel {
+func newGameModel(room *lobby.Room, seat *lobby.Seat, t i18n.Strings, r *lipgloss.Renderer) gameModel {
 	side, _ := room.SideOf(seat)
 	m := gameModel{
 		room:        room,
 		seat:        seat,
 		side:        side,
 		oppIsBot:    room.OpponentIsBot(side),
-		fp:          fp,
-		store:       store,
 		t:           t,
 		renderer:    r,
 		styles:      newStyles(r),
@@ -142,12 +136,6 @@ func (m *gameModel) refresh() bool {
 		m.boom = nil
 		m.clampCursor()
 		return false
-	}
-
-	// Record this match's result once, for human-vs-human games only.
-	if m.snap.Over && !m.oppIsBot && m.fp != "" && m.store != nil && m.recordedMatchNo != m.curMatchNo {
-		m.store.RecordResult(m.fp, m.snap.YouWon)
-		m.recordedMatchNo = m.curMatchNo
 	}
 
 	if m.snap.Events > prev && len(m.snap.Log) > 0 {

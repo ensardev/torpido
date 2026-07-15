@@ -29,6 +29,7 @@ type lobbyMode int
 const (
 	modeBrowse lobbyMode = iota
 	modeJoinCode
+	modeConfirmQuit
 )
 
 // lobbyModel is the screen a player sees after connecting: the list of joinable
@@ -92,6 +93,7 @@ func (m lobbyModel) Init() tea.Cmd { return lobbyTick() }
 
 func (m lobbyModel) newSeat() *lobby.Seat {
 	seat := lobby.NewHumanSeat(m.name)
+	seat.Fingerprint = m.fp
 	if m.fp != "" && m.store != nil {
 		if rec, ok := m.store.Get(m.fp); ok {
 			seat.Wins, seat.Losses = rec.Wins, rec.Losses
@@ -109,10 +111,24 @@ func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.notice = string(msg)
 		return m, nil
 	case tea.KeyMsg:
-		if m.mode == modeJoinCode {
+		switch m.mode {
+		case modeJoinCode:
 			return m.updateJoinCode(msg)
+		case modeConfirmQuit:
+			return m.updateConfirmQuit(msg)
+		default:
+			return m.updateBrowse(msg)
 		}
-		return m.updateBrowse(msg)
+	}
+	return m, nil
+}
+
+func (m lobbyModel) updateConfirmQuit(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "y", "e", "enter", "ctrl+c":
+		return m, tea.Quit
+	default: // any other key cancels
+		m.mode = modeBrowse
 	}
 	return m, nil
 }
@@ -121,8 +137,10 @@ func (m lobbyModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// The lobby is a menu, so it navigates with the arrow keys and reserves the
 	// letters for actions (unlike the game, which uses hjkl to move).
 	switch msg.String() {
-	case "ctrl+c", "q":
+	case "ctrl+c":
 		return m, tea.Quit
+	case "q":
+		m.mode = modeConfirmQuit
 	case "up":
 		if m.cursor > 0 {
 			m.cursor--
@@ -274,8 +292,11 @@ func (m lobbyModel) View() string {
 	list := s.box.Render(strings.Join(rows, "\n"))
 
 	footer := s.help.Render(m.t.LFooter)
-	if m.mode == modeJoinCode {
+	switch m.mode {
+	case modeJoinCode:
 		footer = s.badgeYou.Render(m.t.LCode+m.input+"_") + "  " + s.help.Render(m.t.LCodeHelp)
+	case modeConfirmQuit:
+		footer = s.badgeFoe.Render(m.t.LQuitConfirm)
 	}
 
 	notice := ""

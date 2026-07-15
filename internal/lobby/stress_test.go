@@ -10,7 +10,7 @@ import (
 // can't use -race, but this still surfaces deadlocks (the test would hang and
 // time out) and panics, and checks the bot invariant survives the storm.
 func TestConcurrentChaosKeepsInvariant(t *testing.T) {
-	l := New()
+	l := New(nil)
 
 	const workers = 40
 	const rounds = 50

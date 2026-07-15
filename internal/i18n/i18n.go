@@ -45,10 +45,15 @@ type Strings struct {
 
 	// welcome menu
 	WPlay, WHowTo, WWhatSSH, WAbout, WLanguage, WQuit string
+	WLeaderboard, WNickname                           string
 	WNav, WInfoBack                                   string
 	WHowToTitle, WHowToBody                           string
 	WWhatSSHTitle, WWhatSSHBody                       string
 	WAboutTitle, WAboutBody                           string
+
+	// leaderboard & nickname
+	WLbTitle, WLbEmpty, WLbYouRankFmt           string
+	WNickTitle, WNickHelp, WNickTaken, WNickSet string
 
 	// lobby
 	LOpenRooms, LNoRooms, LPlayer string
@@ -58,58 +63,69 @@ type Strings struct {
 	LCode, LCodeHelp              string
 	LPasswordSoon                 string
 	LErrNoRoom, LErrRoomFull      string
+	LQuitConfirm                  string
 
 	// game — placement
-	VsFmt          string // "vs %s"
-	PlaceFleet     string
-	PlaceHelpFmt   string // "... rotate (%s) ..."
+	VsFmt            string // "vs %s"
+	PlaceFleet       string
+	PlaceHelpFmt     string // "... rotate (%s) ..."
 	OrientH, OrientV string
-	Ready          string
-	OppPlacingFmt  string // "%s is still placing..."
+	Ready            string
+	OppPlacingFmt    string // "%s is still placing..."
 
 	// game — waiting room
 	Room, WaitingOpp, ShareCode, BackHelp string
 
 	// game — battle
-	YourWaters, EnemyWaters string
-	YourTurn                string
-	OppAimingFmt            string // "%s IS AIMING..."
-	BattleHelp              string
+	YourWaters, EnemyWaters           string
+	YourTurn                          string
+	OppAimingFmt                      string // "%s IS AIMING..."
+	BattleHelp                        string
 	LegendShip, LegendHit, LegendMiss string
-	AlreadyFired            string
-	MissFmt, HitFmt, SunkFmt string
+	AlreadyFired                      string
+	MissFmt, HitFmt, SunkFmt          string
 
 	// game — over
-	Victory, Defeat  string
+	Victory, Defeat       string
 	WinMsgFmt, LoseMsgFmt string
-	OverHelp         string
-	Opponent         string
+	OverHelp              string
+	Opponent              string
 
 	// battle log
-	LogTitle                              string
+	LogTitle                                   string
 	LogYouMissFmt, LogYouHitFmt, LogYouSunkFmt string // arg: coord / coord / ship
-	LogOppMissFmt, LogOppHitFmt           string // args: name, coord
-	LogOppSunkFmt                         string // args: name, ship
+	LogOppMissFmt, LogOppHitFmt                string // args: name, coord
+	LogOppSunkFmt                              string // args: name, ship
 
 	// score & rematch
-	ScoreFmt           string // args: yourScore, oppScore, oppName
-	RematchHelp        string
-	RematchWaitingFmt  string // arg: oppName
-	OppLeft            string
+	ScoreFmt          string // args: yourScore, oppScore, oppName
+	RematchHelp       string
+	RematchWaitingFmt string // arg: oppName
+	OppLeft           string
 }
 
 var dicts = map[Lang]Strings{
 	EN: {
 		Tagline: "battleship over ssh",
 
-		WPlay:     "Play",
-		WHowTo:    "How to play",
-		WWhatSSH:  "What is SSH?",
-		WAbout:    "About",
-		WLanguage: "Language",
-		WQuit:     "Quit",
-		WNav:      "↑↓/jk navigate · enter select · q quit",
-		WInfoBack: "press any key to go back",
+		WPlay:        "Play",
+		WHowTo:       "How to play",
+		WWhatSSH:     "What is SSH?",
+		WAbout:       "About",
+		WLanguage:    "Language",
+		WQuit:        "Quit",
+		WLeaderboard: "Leaderboard",
+		WNickname:    "Nickname",
+		WNav:         "↑↓/jk navigate · enter select · q quit",
+		WInfoBack:    "press any key to go back",
+
+		WLbTitle:      "LEADERBOARD — most wins",
+		WLbEmpty:      "No games played yet. Be the first!",
+		WLbYouRankFmt: "Your rank: #%d  (%d-%d)",
+		WNickTitle:    "Choose your nickname",
+		WNickHelp:     "type a name · enter to save · esc to cancel",
+		WNickTaken:    "That nickname is already taken.",
+		WNickSet:      "Nickname saved!",
 
 		WHowToTitle: "How to play",
 		WHowToBody: "Place your fleet of 5 ships on the grid, then take turns firing\n" +
@@ -142,13 +158,14 @@ var dicts = map[Lang]Strings{
 		LPasswordSoon:    "Password rooms are coming soon 🔜",
 		LErrNoRoom:       "No room with that code.",
 		LErrRoomFull:     "That room is full.",
+		LQuitConfirm:     "Really quit torpido? (y/n)",
 
-		VsFmt:        "vs %s",
-		PlaceFleet:   "Place your fleet:",
-		PlaceHelpFmt: "arrows/hjkl move · r rotate (%s) · enter place · q back",
-		OrientH:      "horizontal",
-		OrientV:      "vertical",
-		Ready:        "READY",
+		VsFmt:         "vs %s",
+		PlaceFleet:    "Place your fleet:",
+		PlaceHelpFmt:  "arrows/hjkl move · r rotate (%s) · enter place · q back",
+		OrientH:       "horizontal",
+		OrientV:       "vertical",
+		Ready:         "READY",
 		OppPlacingFmt: "%s is still placing their fleet…",
 
 		Room:       "ROOM: ",
@@ -193,14 +210,24 @@ var dicts = map[Lang]Strings{
 	TR: {
 		Tagline: "terminal amiral battı",
 
-		WPlay:     "Oyna",
-		WHowTo:    "Nasıl oynanır",
-		WWhatSSH:  "SSH nedir?",
-		WAbout:    "Hakkında",
-		WLanguage: "Dil",
-		WQuit:     "Çık",
-		WNav:      "↑↓/jk gez · enter seç · q çık",
-		WInfoBack: "geri dönmek için bir tuşa bas",
+		WPlay:        "Oyna",
+		WHowTo:       "Nasıl oynanır",
+		WWhatSSH:     "SSH nedir?",
+		WAbout:       "Hakkında",
+		WLanguage:    "Dil",
+		WQuit:        "Çık",
+		WLeaderboard: "Skor Tablosu",
+		WNickname:    "Takma ad",
+		WNav:         "↑↓/jk gez · enter seç · q çık",
+		WInfoBack:    "geri dönmek için bir tuşa bas",
+
+		WLbTitle:      "SKOR TABLOSU — en çok galibiyet",
+		WLbEmpty:      "Henüz maç oynanmadı. İlk sen ol!",
+		WLbYouRankFmt: "Senin sıran: #%d  (%d-%d)",
+		WNickTitle:    "Takma adını seç",
+		WNickHelp:     "bir ad yaz · enter kaydet · esc iptal",
+		WNickTaken:    "Bu takma ad zaten alınmış.",
+		WNickSet:      "Takma ad kaydedildi!",
 
 		WHowToTitle: "Nasıl oynanır",
 		WHowToBody: "5 gemilik donanmanı ızgaraya yerleştir, sonra sırayla rakibinin\n" +
@@ -233,6 +260,7 @@ var dicts = map[Lang]Strings{
 		LPasswordSoon:    "Şifreli odalar yakında geliyor 🔜",
 		LErrNoRoom:       "Bu kodla oda yok.",
 		LErrRoomFull:     "Oda dolu.",
+		LQuitConfirm:     "torpido'dan çıkmak istediğine emin misin? (e/h)",
 
 		VsFmt:         "%s'e karşı",
 		PlaceFleet:    "Donanmanı yerleştir:",

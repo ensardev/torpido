@@ -29,8 +29,8 @@ func main() {
 	// Local play runs its own in-process lobby, so `go run .` shows the same
 	// lobby-and-bots experience as connecting over SSH. There's no SSH key
 	// locally, so the fingerprint is empty and stats aren't tracked.
-	lb := lobby.New()
 	store, _ := players.Open("stats.json")
+	lb := lobby.New(store)
 	p := tea.NewProgram(ui.NewRoot(lb, "sen", "", store, lipgloss.DefaultRenderer()), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, "torpido crashed:", err)

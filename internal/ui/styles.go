@@ -31,14 +31,14 @@ func newStyles(r *lipgloss.Renderer) styles {
 	c := func(code string) lipgloss.Color { return lipgloss.Color(code) }
 	return styles{
 		// Board cells: solid 2-wide blocks so ships and the sea look continuous.
-		water: r.NewStyle().Background(c("17")).Foreground(c("25")),  // sea
-		ship:  r.NewStyle().Background(c("22")),                      // your hull
+		water: r.NewStyle().Background(c("17")).Foreground(c("25")),   // sea
+		ship:  r.NewStyle().Background(c("22")),                       // your hull
 		hit:   r.NewStyle().Background(c("160")).Foreground(c("231")), // struck
 		miss:  r.NewStyle().Background(c("17")).Foreground(c("252")),  // splash on sea
 		sunk:  r.NewStyle().Background(c("52")).Foreground(c("231")),  // sunk hull
 
-		previewOK:  r.NewStyle().Background(c("40")),                     // fits here
-		previewBad: r.NewStyle().Background(c("196")),                    // blocked
+		previewOK:  r.NewStyle().Background(c("40")),                      // fits here
+		previewBad: r.NewStyle().Background(c("196")),                     // blocked
 		aim:        r.NewStyle().Background(c("214")).Foreground(c("16")), // targeting reticle
 
 		logo: r.NewStyle().Bold(true).Foreground(c("39")),
@@ -67,8 +67,8 @@ func newStyles(r *lipgloss.Renderer) styles {
 		logGood: r.NewStyle().Foreground(c("77")),
 
 		boom: [4]lipgloss.Style{
-			r.NewStyle().Bold(true).Foreground(c("16")).Background(c("226")), // flash
-			r.NewStyle().Bold(true).Foreground(c("16")).Background(c("214")), // orange
+			r.NewStyle().Bold(true).Foreground(c("16")).Background(c("226")),  // flash
+			r.NewStyle().Bold(true).Foreground(c("16")).Background(c("214")),  // orange
 			r.NewStyle().Bold(true).Foreground(c("231")).Background(c("202")), // red-orange
 			r.NewStyle().Bold(true).Foreground(c("231")).Background(c("196")), // red
 		},

@@ -45,14 +45,14 @@ func Run(addr string) error {
 		return err
 	}
 
-	// One lobby is shared by every connection, so players meet in the same rooms.
-	lb := lobby.New()
-
 	// Persistent player records (nicknames + win/loss), keyed by SSH key.
 	store, err := players.Open(statsPath)
 	if err != nil {
 		return err
 	}
+
+	// One lobby is shared by every connection, so players meet in the same rooms.
+	lb := lobby.New(store)
 
 	srv, err := wish.NewServer(
 		wish.WithAddress(addr),
@@ -64,8 +64,8 @@ func Run(addr string) error {
 		wish.WithMiddleware(
 			// Order matters: middleware runs bottom-to-top on the way in.
 			bm.Middleware(teaHandler(lb, store)), // run the Bubble Tea app
-			activeterm.Middleware(),               // reject connections without a real terminal
-			logging.Middleware(),                  // log who connects
+			activeterm.Middleware(),              // reject connections without a real terminal
+			logging.Middleware(),                 // log who connects
 		),
 	)
 	if err != nil {

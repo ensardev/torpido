@@ -37,12 +37,12 @@ func assertOneIdlePerTier(t *testing.T, l *Lobby) {
 }
 
 func TestNewLobbyHasOneIdleBotRoomPerTier(t *testing.T) {
-	l := New()
+	l := New(nil)
 	assertOneIdlePerTier(t, l)
 }
 
 func TestJoiningBotRoomTopsUpItsTier(t *testing.T) {
-	l := New()
+	l := New(nil)
 	code := botCodeForTier(l, game.Admiral)
 	if _, err := l.JoinByCode(code, NewHumanSeat("Ali"), ""); err != nil {
 		t.Fatalf("joining the Admiral bot room failed: %v", err)
@@ -57,7 +57,7 @@ func TestJoiningBotRoomTopsUpItsTier(t *testing.T) {
 }
 
 func TestLeavingBotRoomRemovesItAndRestoresInvariant(t *testing.T) {
-	l := New()
+	l := New(nil)
 	code := botCodeForTier(l, game.SeaWolf)
 	seat := NewHumanSeat("Ali")
 	r, err := l.JoinByCode(code, seat, "")
@@ -69,7 +69,7 @@ func TestLeavingBotRoomRemovesItAndRestoresInvariant(t *testing.T) {
 }
 
 func TestManyJoinsAndLeavesDoNotLeakBotRooms(t *testing.T) {
-	l := New()
+	l := New(nil)
 	for i := 0; i < 20; i++ {
 		tier := botTiers[i%len(botTiers)]
 		code := botCodeForTier(l, tier)
@@ -84,7 +84,7 @@ func TestManyJoinsAndLeavesDoNotLeakBotRooms(t *testing.T) {
 }
 
 func TestCreateAndJoinHumanRoom(t *testing.T) {
-	l := New()
+	l := New(nil)
 	host := NewHumanSeat("Ali")
 	r := l.CreateRoom(host, "", false)
 	if r.Code == "" {
@@ -99,7 +99,7 @@ func TestCreateAndJoinHumanRoom(t *testing.T) {
 }
 
 func TestPasswordProtectedRoom(t *testing.T) {
-	l := New()
+	l := New(nil)
 	r := l.CreateRoom(NewHumanSeat("Ali"), "1234", true)
 	if _, err := l.JoinByCode(r.Code, NewHumanSeat("Veli"), "0000"); err != ErrBadPassword {
 		t.Fatalf("wrong password should be rejected, got %v", err)
@@ -110,7 +110,7 @@ func TestPasswordProtectedRoom(t *testing.T) {
 }
 
 func TestPrivateRoomNotListed(t *testing.T) {
-	l := New()
+	l := New(nil)
 	r := l.CreateRoom(NewHumanSeat("Ali"), "", true)
 	for _, info := range l.PublicRooms() {
 		if info.Code == r.Code {
@@ -120,7 +120,7 @@ func TestPrivateRoomNotListed(t *testing.T) {
 }
 
 func TestQuickMatchPairsTwoPlayers(t *testing.T) {
-	l := New()
+	l := New(nil)
 	first := l.QuickMatch(NewHumanSeat("Ali"))
 	second := l.QuickMatch(NewHumanSeat("Veli"))
 	if first.Code != second.Code {
@@ -129,7 +129,7 @@ func TestQuickMatchPairsTwoPlayers(t *testing.T) {
 }
 
 func TestReconcilePrunesExtraIdleRooms(t *testing.T) {
-	l := New()
+	l := New(nil)
 	// Inject a duplicate idle Admiral room, then reconcile it away.
 	l.mu.Lock()
 	l.createBotRoomLocked(game.Admiral)

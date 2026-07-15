@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ensardev/ssh-torpido/internal/game"
+	"github.com/ensardev/ssh-torpido/internal/players"
 )
 
 // Errors returned when joining a room.
@@ -31,13 +32,16 @@ type Lobby struct {
 	mu    sync.Mutex
 	rooms map[string]*Room
 	rng   *rand.Rand
+	store *players.Store // persistent W/L; may be nil (e.g. in tests)
 }
 
-// New builds a lobby with the standard three bot rooms already waiting.
-func New() *Lobby {
+// New builds a lobby with the standard three bot rooms already waiting. store is
+// the persistent player record used to record wins/losses; pass nil to disable.
+func New(store *players.Store) *Lobby {
 	l := &Lobby{
 		rooms: make(map[string]*Room),
 		rng:   rand.New(rand.NewSource(time.Now().UnixNano())),
+		store: store,
 	}
 	l.mu.Lock()
 	l.reconcileLocked()
@@ -59,6 +63,7 @@ func (l *Lobby) CreateRoom(creator *Seat, password string, private bool) *Room {
 		Private:  private,
 		match:    game.NewMatch(),
 		matchNo:  1,
+		store:    l.store,
 	}
 	r.seats[0] = creator
 	l.rooms[code] = r
@@ -117,7 +122,7 @@ func (l *Lobby) QuickMatch(joiner *Seat) *Room {
 	}
 
 	code := l.uniqueCodeLocked()
-	r := &Room{Code: code, Kind: HumanRoom, match: game.NewMatch(), matchNo: 1}
+	r := &Room{Code: code, Kind: HumanRoom, match: game.NewMatch(), matchNo: 1, store: l.store}
 	r.seats[0] = joiner
 	l.rooms[code] = r
 	return r
@@ -131,23 +136,33 @@ func (l *Lobby) Leave(r *Room, seat *Seat) {
 	defer l.mu.Unlock()
 
 	r.mu.Lock()
-	leaver, found := -1, false
+	// Leaving mid-battle is a forfeit; leaving during placement or after the
+	// match is over is not.
+	wasBattle := r.match.Phase() == game.MatchBattle
+	leaver, leaverFp, found := -1, "", false
 	for i, s := range r.seats {
 		if s == seat {
-			r.seats[i], leaver, found = nil, i, true
+			r.seats[i], leaver, leaverFp, found = nil, i, s.Fingerprint, true
 		}
-	}
-	if found {
-		if _, over := r.match.Winner(); !over {
-			r.match.Resign(game.Side(leaver)) // opponent wins the forfeit
-		}
-		r.scoreIfEndedLocked()
 	}
 	humans := r.humanCountLocked()
 	isBot := r.Kind == BotRoom
-	// One human left alone in a human room drops back to a fresh waiting room,
-	// re-listed for a new opponent, with the score wiped.
+
 	if !isBot && humans == 1 {
+		// A player left a human room mid-series.
+		if wasBattle && found {
+			// Forfeit: the leaver takes a loss, the remaining player a win.
+			if remaining := r.seats[game.Side(leaver).Other()]; remaining != nil && r.store != nil {
+				if remaining.Fingerprint != "" {
+					r.store.RecordResult(remaining.Fingerprint, true)
+					remaining.Wins++
+				}
+				if leaverFp != "" {
+					r.store.RecordResult(leaverFp, false)
+				}
+			}
+		}
+		// Either way, reset to a fresh waiting room for a new opponent.
 		r.resetSeriesLocked()
 	}
 	r.notifyLocked()
@@ -212,7 +227,7 @@ func (l *Lobby) reconcileLocked() {
 // fleet, waiting for a human to take the open seat. Assumes l.mu is held.
 func (l *Lobby) createBotRoomLocked(tier game.Difficulty) *Room {
 	code := l.uniqueCodeLocked()
-	r := &Room{Code: code, Kind: BotRoom, Tier: tier, match: game.NewMatch(), matchNo: 1}
+	r := &Room{Code: code, Kind: BotRoom, Tier: tier, match: game.NewMatch(), matchNo: 1, store: l.store}
 	r.seats[1] = &Seat{Name: tier.Name(), bot: game.NewBot(tier, l.rng.Int63())}
 	game.RandomPlacement(r.match.Board(game.SideB), game.StandardFleet, rand.New(rand.NewSource(l.rng.Int63())))
 	r.match.FinishPlacing(game.SideB)

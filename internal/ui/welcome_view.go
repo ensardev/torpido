@@ -15,6 +15,10 @@ func (m welcomeModel) View() string {
 		return m.viewInfo(m.t.WWhatSSHTitle, m.t.WWhatSSHBody)
 	case pageAbout:
 		return m.viewInfo(m.t.WAboutTitle, m.t.WAboutBody)
+	case pageLeaderboard:
+		return m.viewLeaderboard()
+	case pageNickname:
+		return m.viewNickname()
 	default:
 		return m.viewMenu()
 	}
@@ -61,8 +65,16 @@ func (m welcomeModel) viewMenu() string {
 	tagline := s.tag.Render(m.t.Tagline)
 	torpedo := m.renderTorpedo(bannerW)
 
-	items := []string{m.t.WPlay, m.t.WHowTo, m.t.WWhatSSH, m.t.WAbout,
-		fmt.Sprintf("%s: %s", m.t.WLanguage, m.lang.Label()), m.t.WQuit}
+	items := []string{
+		m.t.WPlay,
+		m.t.WLeaderboard,
+		fmt.Sprintf("%s: %s", m.t.WNickname, m.nick),
+		m.t.WHowTo,
+		m.t.WWhatSSH,
+		m.t.WAbout,
+		fmt.Sprintf("%s: %s", m.t.WLanguage, m.lang.Label()),
+		m.t.WQuit,
+	}
 	var menu []string
 	for i, it := range items {
 		if i == m.cursor {
@@ -86,6 +98,59 @@ func (m welcomeModel) viewMenu() string {
 		s.tag.Render("by ")+s.logo.Render("ensar.dev"),
 	)
 	return lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Padding(1, 0).Render(block)
+}
+
+func (m welcomeModel) viewLeaderboard() string {
+	s := m.styles
+	var rows []string
+	if m.store != nil {
+		for i, r := range m.store.Top(10) {
+			marker, nickStyle := "   ", s.dim
+			if r.Fingerprint == m.fp && m.fp != "" {
+				marker, nickStyle = s.logo.Render(" ▸ "), s.rosterDone
+			}
+			rows = append(rows, fmt.Sprintf("%s%2d.  %s  %s",
+				marker, i+1, nickStyle.Render(fmt.Sprintf("%-16s", r.Nick)),
+				s.tag.Render(fmt.Sprintf("%d-%d", r.Wins, r.Losses))))
+		}
+	}
+	if len(rows) == 0 {
+		rows = append(rows, s.dim.Render(m.t.WLbEmpty))
+	}
+
+	yourRank := ""
+	if m.store != nil && m.fp != "" {
+		if rec, ok := m.store.Get(m.fp); ok {
+			yourRank = s.tag.Render(fmt.Sprintf(m.t.WLbYouRankFmt, m.store.Rank(m.fp), rec.Wins, rec.Losses))
+		}
+	}
+
+	content := lipgloss.JoinVertical(lipgloss.Left,
+		s.logo.Render(m.t.WLbTitle),
+		"",
+		strings.Join(rows, "\n"),
+		"",
+		yourRank,
+		"",
+		s.help.Render(m.t.WInfoBack),
+	)
+	return screen(content)
+}
+
+func (m welcomeModel) viewNickname() string {
+	s := m.styles
+	notice := ""
+	if m.notice != "" {
+		notice = s.tag.Render(m.notice) + "\n\n"
+	}
+	content := lipgloss.JoinVertical(lipgloss.Left,
+		s.logo.Render(m.t.WNickTitle),
+		"",
+		s.badgeYou.Render(" "+m.input+"_ "),
+		"",
+		notice+s.help.Render(m.t.WNickHelp),
+	)
+	return screen(content)
 }
 
 func (m welcomeModel) viewInfo(title, body string) string {

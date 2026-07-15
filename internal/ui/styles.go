@@ -2,39 +2,49 @@ package ui
 
 import "github.com/charmbracelet/lipgloss"
 
-// Each board square is drawn as a 2-column block with NO gap between squares,
-// so same-colored neighbours merge into one solid shape. That is what makes a
-// ship look like one continuous hull both horizontally and vertically, and what
-// turns the empty squares into one continuous sea.
+// styles holds every Lip Gloss style the UI uses. They are built per session
+// from a renderer, so colors match the *connected* terminal. Over SSH each
+// player has their own terminal with its own color support, so styles must come
+// from that session's renderer (see server.MakeRenderer) rather than one shared
+// global — otherwise the game renders with the server's colors, not yours.
+type styles struct {
+	water, ship, hit, miss, sunk      lipgloss.Style
+	previewOK, previewBad, aim        lipgloss.Style
+	logo, tag, dim, help, box         lipgloss.Style
+	badgeYou, badgeFoe                lipgloss.Style
+	rosterDone, rosterNow, rosterTodo lipgloss.Style
+	win, lose                         lipgloss.Style
+}
 
-// Cell block styles. Colors are ANSI-256 codes so they work in any terminal.
-var (
-	styleWater = lipgloss.NewStyle().Background(lipgloss.Color("17")).Foreground(lipgloss.Color("25"))  // sea
-	styleShip  = lipgloss.NewStyle().Background(lipgloss.Color("22"))                                    // your hull
-	styleHit   = lipgloss.NewStyle().Background(lipgloss.Color("160")).Foreground(lipgloss.Color("231")) // struck
-	styleMiss  = lipgloss.NewStyle().Background(lipgloss.Color("17")).Foreground(lipgloss.Color("252"))  // splash on sea
-	styleSunk  = lipgloss.NewStyle().Background(lipgloss.Color("52")).Foreground(lipgloss.Color("231"))  // sunk hull
+// newStyles builds the style set from a renderer. Colors are ANSI-256 codes.
+func newStyles(r *lipgloss.Renderer) styles {
+	c := func(code string) lipgloss.Color { return lipgloss.Color(code) }
+	return styles{
+		// Board cells: solid 2-wide blocks so ships and the sea look continuous.
+		water: r.NewStyle().Background(c("17")).Foreground(c("25")),  // sea
+		ship:  r.NewStyle().Background(c("22")),                      // your hull
+		hit:   r.NewStyle().Background(c("160")).Foreground(c("231")), // struck
+		miss:  r.NewStyle().Background(c("17")).Foreground(c("252")),  // splash on sea
+		sunk:  r.NewStyle().Background(c("52")).Foreground(c("231")),  // sunk hull
 
-	stylePreviewOK  = lipgloss.NewStyle().Background(lipgloss.Color("40"))                                     // fits here
-	stylePreviewBad = lipgloss.NewStyle().Background(lipgloss.Color("196"))                                   // blocked
-	styleAim        = lipgloss.NewStyle().Background(lipgloss.Color("214")).Foreground(lipgloss.Color("16"))  // targeting reticle
-)
+		previewOK:  r.NewStyle().Background(c("40")),                     // fits here
+		previewBad: r.NewStyle().Background(c("196")),                    // blocked
+		aim:        r.NewStyle().Background(c("214")).Foreground(c("16")), // targeting reticle
 
-// Chrome around the boards.
-var (
-	styleLogo = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39"))
-	styleTag  = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
-	styleDim  = lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
-	styleHelp = lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
-	styleBox  = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("24")).Padding(0, 1)
+		logo: r.NewStyle().Bold(true).Foreground(c("39")),
+		tag:  r.NewStyle().Foreground(c("245")),
+		dim:  r.NewStyle().Foreground(c("244")),
+		help: r.NewStyle().Foreground(c("244")),
+		box:  r.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(c("24")).Padding(0, 1),
 
-	styleBadgeYou = lipgloss.NewStyle().Background(lipgloss.Color("28")).Foreground(lipgloss.Color("231")).Bold(true).Padding(0, 1)
-	styleBadgeFoe = lipgloss.NewStyle().Background(lipgloss.Color("130")).Foreground(lipgloss.Color("231")).Bold(true).Padding(0, 1)
+		badgeYou: r.NewStyle().Background(c("28")).Foreground(c("231")).Bold(true).Padding(0, 1),
+		badgeFoe: r.NewStyle().Background(c("130")).Foreground(c("231")).Bold(true).Padding(0, 1),
 
-	styleRosterDone = lipgloss.NewStyle().Foreground(lipgloss.Color("42"))
-	styleRosterNow  = lipgloss.NewStyle().Background(lipgloss.Color("39")).Foreground(lipgloss.Color("16")).Bold(true).Padding(0, 1)
-	styleRosterTodo = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+		rosterDone: r.NewStyle().Foreground(c("42")),
+		rosterNow:  r.NewStyle().Background(c("39")).Foreground(c("16")).Bold(true).Padding(0, 1),
+		rosterTodo: r.NewStyle().Foreground(c("240")),
 
-	styleWin  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("42"))
-	styleLose = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("196"))
-)
+		win:  r.NewStyle().Bold(true).Foreground(c("42")),
+		lose: r.NewStyle().Bold(true).Foreground(c("196")),
+	}
+}

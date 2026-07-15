@@ -6,6 +6,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/ensardev/torpido/internal/game"
 )
 
@@ -46,17 +47,23 @@ type Model struct {
 	// game over
 	playerWon bool
 
-	rng *rand.Rand
+	rng      *rand.Rand
+	renderer *lipgloss.Renderer
+	styles   styles
 }
 
-// NewModel returns a fresh game sitting on the placement screen.
-func NewModel() Model {
+// NewModel returns a fresh game sitting on the placement screen. The renderer
+// carries the connected terminal's color profile; pass lipgloss.DefaultRenderer()
+// for local play or a per-session renderer for an SSH connection.
+func NewModel(renderer *lipgloss.Renderer) Model {
 	m := Model{
 		phase:       phasePlacement,
 		player:      game.NewBoard(),
 		fleet:       game.StandardFleet,
 		orientation: game.Horizontal,
 		rng:         rand.New(rand.NewSource(time.Now().UnixNano())),
+		renderer:    renderer,
+		styles:      newStyles(renderer),
 	}
 	m.clampCursor()
 	return m
@@ -243,7 +250,7 @@ func (m Model) updateGameOver(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "ctrl+c", "q":
 		return m, tea.Quit
 	case "r", "enter":
-		return NewModel(), nil
+		return NewModel(m.renderer), nil
 	}
 	return m, nil
 }

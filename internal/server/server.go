@@ -69,11 +69,12 @@ func Run(addr string) error {
 	return srv.Shutdown(ctx)
 }
 
-// teaHandler builds a fresh game for each incoming SSH session. Wish's Bubble
-// Tea middleware wires the session's terminal (size, colors, input) into the
-// program for us, so the same Model that runs locally runs over SSH unchanged.
+// teaHandler builds a fresh game for each incoming SSH session. It gives the
+// Model a renderer bound to *this* session's terminal, so colors match the
+// player's terminal instead of the server's.
 func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
-	return ui.NewModel(), []tea.ProgramOption{tea.WithAltScreen()}
+	renderer := bm.MakeRenderer(s)
+	return ui.NewModel(renderer), []tea.ProgramOption{tea.WithAltScreen()}
 }
 
 // port pulls the port out of a listen address for the friendly log line.

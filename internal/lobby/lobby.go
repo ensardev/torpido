@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ensardev/torpido/internal/game"
+	"github.com/ensardev/ssh-torpido/internal/game"
 )
 
 // Errors returned when joining a room.

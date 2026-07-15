@@ -6,8 +6,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/ensardev/torpido/internal/game"
-	"github.com/ensardev/torpido/internal/lobby"
+	"github.com/ensardev/ssh-torpido/internal/game"
+	"github.com/ensardev/ssh-torpido/internal/lobby"
 )
 
 // botDelay is the pause before a bot fires back, so its move is readable.

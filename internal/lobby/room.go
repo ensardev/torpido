@@ -10,7 +10,7 @@ package lobby
 import (
 	"sync"
 
-	"github.com/ensardev/torpido/internal/game"
+	"github.com/ensardev/ssh-torpido/internal/game"
 )
 
 // Kind is whether a room hosts a human opponent or a waiting bot.

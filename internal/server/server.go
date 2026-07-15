@@ -23,8 +23,8 @@ import (
 	bm "github.com/charmbracelet/wish/bubbletea"
 	"github.com/charmbracelet/wish/logging"
 
-	"github.com/ensardev/torpido/internal/lobby"
-	"github.com/ensardev/torpido/internal/ui"
+	"github.com/ensardev/ssh-torpido/internal/lobby"
+	"github.com/ensardev/ssh-torpido/internal/ui"
 )
 
 // hostKeyPath is where the server's SSH identity lives. It is generated on first

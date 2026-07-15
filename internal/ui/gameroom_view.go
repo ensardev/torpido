@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/ensardev/torpido/internal/game"
+	"github.com/ensardev/ssh-torpido/internal/game"
 )
 
 func (m gameModel) View() string {

@@ -3,7 +3,7 @@ package lobby
 import (
 	"testing"
 
-	"github.com/ensardev/torpido/internal/game"
+	"github.com/ensardev/ssh-torpido/internal/game"
 )
 
 // idleBotTiers returns how many idle bot rooms exist per tier in the public list.

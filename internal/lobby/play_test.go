@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/ensardev/torpido/internal/game"
+	"github.com/ensardev/ssh-torpido/internal/game"
 )
 
 // placeStandardFleet lays a full fleet in a known corner so a side finishes

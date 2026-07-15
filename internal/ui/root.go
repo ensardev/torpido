@@ -3,7 +3,7 @@ package ui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/ensardev/torpido/internal/lobby"
+	"github.com/ensardev/ssh-torpido/internal/lobby"
 )
 
 // Root is the top-level model for one connection. It shows the lobby, and swaps

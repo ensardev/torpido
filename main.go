@@ -6,9 +6,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/ensardev/torpido/internal/lobby"
-	"github.com/ensardev/torpido/internal/server"
-	"github.com/ensardev/torpido/internal/ui"
+	"github.com/ensardev/ssh-torpido/internal/lobby"
+	"github.com/ensardev/ssh-torpido/internal/server"
+	"github.com/ensardev/ssh-torpido/internal/ui"
 )
 
 func main() {

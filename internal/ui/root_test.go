@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/ensardev/torpido/internal/game"
-	"github.com/ensardev/torpido/internal/lobby"
+	"github.com/ensardev/ssh-torpido/internal/game"
+	"github.com/ensardev/ssh-torpido/internal/lobby"
 )
 
 func idleAdmiralCount(l *lobby.Lobby) int {

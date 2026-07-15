@@ -1,6 +1,6 @@
 package lobby
 
-import "github.com/ensardev/torpido/internal/game"
+import "github.com/ensardev/ssh-torpido/internal/game"
 
 // This file is how the UI drives a match: every action goes through the room so
 // the shared match stays consistent and the opponent is woken to re-render.

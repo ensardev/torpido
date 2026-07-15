@@ -5,8 +5,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/ensardev/torpido/internal/game"
-	"github.com/ensardev/torpido/internal/lobby"
+	"github.com/ensardev/ssh-torpido/internal/game"
+	"github.com/ensardev/ssh-torpido/internal/lobby"
 )
 
 func placeFleet(room *lobby.Room, side game.Side) {

@@ -1,4 +1,4 @@
-module github.com/ensardev/torpido
+module github.com/ensardev/ssh-torpido
 
 go 1.26.5
 

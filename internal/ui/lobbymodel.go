@@ -8,8 +8,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/ensardev/torpido/internal/game"
-	"github.com/ensardev/torpido/internal/lobby"
+	"github.com/ensardev/ssh-torpido/internal/game"
+	"github.com/ensardev/ssh-torpido/internal/lobby"
 )
 
 // lobbyRefresh is how often the room list is refreshed so new rooms appear.

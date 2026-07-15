@@ -29,6 +29,8 @@ type lobbyMode int
 const (
 	modeBrowse lobbyMode = iota
 	modeJoinCode
+	modeCreatePass // typing a password for a room being created
+	modeJoinPass   // typing a password for a room being joined
 )
 
 // lobbyModel is the screen a player sees after connecting: the list of joinable
@@ -47,8 +49,9 @@ type lobbyModel struct {
 	notice string
 	width  int
 
-	mode  lobbyMode
-	input string
+	mode        lobbyMode
+	input       string
+	pendingCode string // room we're entering a join password for
 }
 
 func newLobbyModel(l *lobby.Lobby, name, fp string, store *players.Store, t i18n.Strings, r *lipgloss.Renderer) lobbyModel {
@@ -113,11 +116,42 @@ func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case lobbyNoticeMsg:
 		m.notice = string(msg)
 		return m, nil
+	case needPasswordMsg:
+		m.mode, m.pendingCode, m.input, m.notice = modeJoinPass, msg.code, "", ""
+		return m, nil
 	case tea.KeyMsg:
-		if m.mode == modeJoinCode {
+		switch m.mode {
+		case modeJoinCode:
 			return m.updateJoinCode(msg)
+		case modeCreatePass:
+			return m.updateTextField(msg, m.createRoom)
+		case modeJoinPass:
+			return m.updateTextField(msg, func(pw string) (tea.Model, tea.Cmd) {
+				return m.joinByCode(m.pendingCode, pw)
+			})
+		default:
+			return m.updateBrowse(msg)
 		}
-		return m.updateBrowse(msg)
+	}
+	return m, nil
+}
+
+// updateTextField handles typing into a password field; submit is called with
+// the typed text on enter.
+func (m lobbyModel) updateTextField(msg tea.KeyMsg, submit func(string) (tea.Model, tea.Cmd)) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		m.mode, m.input, m.notice = modeBrowse, "", ""
+	case "enter":
+		return submit(m.input)
+	case "backspace":
+		if len(m.input) > 0 {
+			m.input = m.input[:len(m.input)-1]
+		}
+	default:
+		if len(msg.String()) == 1 && len(m.input) < 16 {
+			m.input += msg.String()
+		}
 	}
 	return m, nil
 }
@@ -143,13 +177,11 @@ func (m lobbyModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "enter", " ":
 		return m.selectRoom()
 	case "c":
-		return m.createRoom()
+		m.mode, m.input, m.notice = modeCreatePass, "", ""
 	case "h":
 		return m.quickMatch()
 	case "k":
-		m.mode = modeJoinCode
-		m.input = ""
-		m.notice = ""
+		m.mode, m.input, m.notice = modeJoinCode, "", ""
 	}
 	return m, nil
 }
@@ -163,7 +195,7 @@ func (m lobbyModel) updateJoinCode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		code := m.input
 		m.mode = modeBrowse
 		m.input = ""
-		return m.joinByCode(code)
+		return m.joinByCode(code, "")
 	case "backspace":
 		if len(m.input) > 0 {
 			m.input = m.input[:len(m.input)-1]
@@ -182,20 +214,28 @@ func (m lobbyModel) selectRoom() (tea.Model, tea.Cmd) {
 	}
 	info := m.rooms[m.cursor]
 	if info.HasPassword {
-		m.notice = m.t.LPasswordSoon
+		// Ask for the password before joining.
+		m.mode, m.pendingCode, m.input, m.notice = modeJoinPass, info.Code, "", ""
 		return m, nil
 	}
-	return m.joinByCode(info.Code)
+	return m.joinByCode(info.Code, "")
 }
 
-func (m lobbyModel) joinByCode(code string) (tea.Model, tea.Cmd) {
+// needPasswordMsg tells the lobby a room needs a password to join.
+type needPasswordMsg struct{ code string }
+
+func (m lobbyModel) joinByCode(code, password string) (tea.Model, tea.Cmd) {
 	l, seat, t := m.lobby, m.newSeat(), m.t
 	return m, func() tea.Msg {
-		room, err := l.JoinByCode(code, seat, "")
-		if err != nil {
+		room, err := l.JoinByCode(code, seat, password)
+		switch {
+		case err == nil:
+			return enterRoomMsg{room: room, seat: seat}
+		case errors.Is(err, lobby.ErrBadPassword) && password == "":
+			return needPasswordMsg{code: code} // prompt for the password
+		default:
 			return lobbyNoticeMsg(joinErrText(err, t))
 		}
-		return enterRoomMsg{room: room, seat: seat}
 	}
 }
 
@@ -206,15 +246,18 @@ func joinErrText(err error, t i18n.Strings) string {
 		return t.LErrNoRoom
 	case errors.Is(err, lobby.ErrRoomFull):
 		return t.LErrRoomFull
+	case errors.Is(err, lobby.ErrBadPassword):
+		return t.LErrBadPassword
 	default:
 		return err.Error()
 	}
 }
 
-func (m lobbyModel) createRoom() (tea.Model, tea.Cmd) {
+func (m lobbyModel) createRoom(password string) (tea.Model, tea.Cmd) {
 	l, seat := m.lobby, m.newSeat()
 	return m, func() tea.Msg {
-		room := l.CreateRoom(seat, "", true) // private: joinable only by its code
+		// Public room, listed for everyone; a password (if any) gates joining.
+		room := l.CreateRoom(seat, password, false)
 		return enterRoomMsg{room: room, seat: seat}
 	}
 }
@@ -281,8 +324,14 @@ func (m lobbyModel) View() string {
 	list := s.box.Render(strings.Join(rows, "\n"))
 
 	footer := s.help.Render(m.t.LFooter)
-	if m.mode == modeJoinCode {
+	switch m.mode {
+	case modeJoinCode:
 		footer = s.badgeYou.Render(m.t.LCode+m.input+"_") + "  " + s.help.Render(m.t.LCodeHelp)
+	case modeCreatePass:
+		footer = s.badgeYou.Render(m.t.LPassLabel+m.input+"_") + "  " + s.help.Render(m.t.LPassCreateHelp)
+	case modeJoinPass:
+		masked := strings.Repeat("•", len(m.input))
+		footer = s.badgeYou.Render(m.t.LPassLabel+masked+"_") + "  " + s.help.Render(m.t.LPassJoinHelp)
 	}
 
 	notice := ""

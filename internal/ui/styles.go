@@ -39,7 +39,7 @@ func newStyles(r *lipgloss.Renderer) styles {
 
 		previewOK:  r.NewStyle().Background(c("40")),                      // fits here
 		previewBad: r.NewStyle().Background(c("196")),                     // blocked
-		aim:        r.NewStyle().Background(c("214")).Foreground(c("16")), // targeting reticle
+		aim:        r.NewStyle().Background(c("25")).Foreground(c("227")).Bold(true), // targeting reticle
 
 		logo: r.NewStyle().Bold(true).Foreground(c("39")),
 		tag:  r.NewStyle().Foreground(c("245")),

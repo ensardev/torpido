@@ -61,8 +61,10 @@ type Strings struct {
 	LHumanWaitingFmt              string // "%s · %d/2 waiting"
 	LFooter                       string
 	LCode, LCodeHelp              string
-	LPasswordSoon                 string
+	LPassLabel                    string
+	LPassCreateHelp, LPassJoinHelp string
 	LErrNoRoom, LErrRoomFull      string
+	LErrBadPassword               string
 	LQuitConfirm                  string
 
 	// game — placement
@@ -155,9 +157,12 @@ var dicts = map[Lang]Strings{
 		LFooter:          "↑↓ move · enter join · c create · h quick · k code · q menu",
 		LCode:            "CODE: ",
 		LCodeHelp:        "type the letters · enter to join · esc to cancel",
-		LPasswordSoon:    "Password rooms are coming soon 🔜",
+		LPassLabel:       "PASS: ",
+		LPassCreateHelp:  "blank = open room · enter create · esc cancel",
+		LPassJoinHelp:    "enter to join · esc cancel",
 		LErrNoRoom:       "No room with that code.",
 		LErrRoomFull:     "That room is full.",
+		LErrBadPassword:  "Wrong password.",
 		LQuitConfirm:     "Really quit torpido? (y/n)",
 
 		VsFmt:         "vs %s",
@@ -257,9 +262,12 @@ var dicts = map[Lang]Strings{
 		LFooter:          "↑↓ gez · enter gir · c oda kur · h eşleş · k kod · q menü",
 		LCode:            "KOD: ",
 		LCodeHelp:        "harfleri yaz · enter katıl · esc iptal",
-		LPasswordSoon:    "Şifreli odalar yakında geliyor 🔜",
+		LPassLabel:       "ŞİFRE: ",
+		LPassCreateHelp:  "boş = şifresiz oda · enter kur · esc iptal",
+		LPassJoinHelp:    "enter katıl · esc iptal",
 		LErrNoRoom:       "Bu kodla oda yok.",
 		LErrRoomFull:     "Oda dolu.",
+		LErrBadPassword:  "Şifre yanlış.",
 		LQuitConfirm:     "torpido'dan çıkmak istediğine emin misin? (e/h)",
 
 		VsFmt:         "%s'e karşı",

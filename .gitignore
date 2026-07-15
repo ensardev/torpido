@@ -2,6 +2,8 @@
 torpido
 torpido.exe
 *.exe
+*.exe~
+*~
 *.dll
 *.so
 *.dylib

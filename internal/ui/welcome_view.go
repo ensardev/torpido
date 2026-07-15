@@ -39,22 +39,24 @@ func (m welcomeModel) renderTorpedo(width int) string {
 	if width < 8 {
 		width = 8
 	}
-	const sprite = "══►"
-	pos := m.frame % (width + len(sprite))
+	sprite := []rune("══►") // runes, not bytes — each glyph is one cell
 	line := []rune(strings.Repeat("·", width))
+	start := m.frame%(width+len(sprite)) - len(sprite) + 1
 	for i, ch := range sprite {
-		p := pos - len(sprite) + 1 + i
-		if p >= 0 && p < width {
+		if p := start + i; p >= 0 && p < width {
 			line[p] = ch
 		}
 	}
-	s := string(line)
-	// Color the water dim and the torpedo bright.
-	torp := m.styles.tierAdmiral.Render(sprite)
-	if idx := strings.Index(s, sprite); idx >= 0 {
-		return m.styles.water.Render(s[:idx]) + torp + m.styles.water.Render(s[idx+len(sprite):])
+	// Dim water dots with a bright torpedo where it currently sits.
+	var b strings.Builder
+	for i, ch := range line {
+		if i >= start && i < start+len(sprite) {
+			b.WriteString(m.styles.tierAdmiral.Render(string(ch)))
+		} else {
+			b.WriteString(m.styles.dim.Render(string(ch)))
+		}
 	}
-	return m.styles.water.Render(s)
+	return b.String()
 }
 
 func (m welcomeModel) viewMenu() string {
@@ -84,6 +86,11 @@ func (m welcomeModel) viewMenu() string {
 		}
 	}
 
+	nav := s.help.Render(m.t.WNav)
+	if m.confirmQuit {
+		nav = s.badgeFoe.Render(m.t.LQuitConfirm)
+	}
+
 	block := lipgloss.JoinVertical(lipgloss.Center,
 		logo,
 		tagline,
@@ -93,7 +100,7 @@ func (m welcomeModel) viewMenu() string {
 		"",
 		lipgloss.JoinVertical(lipgloss.Left, menu...),
 		"",
-		s.help.Render(m.t.WNav),
+		nav,
 		s.dim.Render("ssh torpido.dev"),
 		s.tag.Render("by ")+s.logo.Render("ensar.dev"),
 	)

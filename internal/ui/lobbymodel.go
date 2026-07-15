@@ -29,7 +29,6 @@ type lobbyMode int
 const (
 	modeBrowse lobbyMode = iota
 	modeJoinCode
-	modeConfirmQuit
 )
 
 // lobbyModel is the screen a player sees after connecting: the list of joinable
@@ -115,24 +114,10 @@ func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.notice = string(msg)
 		return m, nil
 	case tea.KeyMsg:
-		switch m.mode {
-		case modeJoinCode:
+		if m.mode == modeJoinCode {
 			return m.updateJoinCode(msg)
-		case modeConfirmQuit:
-			return m.updateConfirmQuit(msg)
-		default:
-			return m.updateBrowse(msg)
 		}
-	}
-	return m, nil
-}
-
-func (m lobbyModel) updateConfirmQuit(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "y", "e", "enter", "ctrl+c":
-		return m, tea.Quit
-	default: // any other key cancels
-		m.mode = modeBrowse
+		return m.updateBrowse(msg)
 	}
 	return m, nil
 }
@@ -144,7 +129,7 @@ func (m lobbyModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "ctrl+c":
 		return m, tea.Quit
 	case "q":
-		m.mode = modeConfirmQuit
+		return m, backToWelcome
 	case "up":
 		if m.cursor > 0 {
 			m.cursor--
@@ -296,11 +281,8 @@ func (m lobbyModel) View() string {
 	list := s.box.Render(strings.Join(rows, "\n"))
 
 	footer := s.help.Render(m.t.LFooter)
-	switch m.mode {
-	case modeJoinCode:
+	if m.mode == modeJoinCode {
 		footer = s.badgeYou.Render(m.t.LCode+m.input+"_") + "  " + s.help.Render(m.t.LCodeHelp)
-	case modeConfirmQuit:
-		footer = s.badgeFoe.Render(m.t.LQuitConfirm)
 	}
 
 	notice := ""

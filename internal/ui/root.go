@@ -67,6 +67,11 @@ type leaveGameMsg struct{}
 
 func leaveGame() tea.Msg { return leaveGameMsg{} }
 
+// backToWelcomeMsg asks the root to return to the welcome menu from the lobby.
+type backToWelcomeMsg struct{}
+
+func backToWelcome() tea.Msg { return backToWelcomeMsg{} }
+
 func (m Root) Init() tea.Cmd { return m.welcomeM.Init() }
 
 func (m Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -74,6 +79,10 @@ func (m Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case setNickMsg:
 		m.name = msg.nick // use the new nickname for future rooms
 		return m, nil
+
+	case backToWelcomeMsg:
+		m.screen = rootWelcome
+		return m, m.welcomeM.Init()
 
 	case startLobbyMsg:
 		m.lang = msg.lang

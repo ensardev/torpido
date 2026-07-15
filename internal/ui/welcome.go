@@ -81,12 +81,13 @@ type welcomeModel struct {
 	renderer *lipgloss.Renderer
 	styles   styles
 
-	page   welcomePage
-	cursor int
-	frame  int
-	width  int
-	input  string
-	notice string
+	page        welcomePage
+	cursor      int
+	frame       int
+	width       int
+	input       string
+	notice      string
+	confirmQuit bool
 }
 
 func newWelcomeModel(lang i18n.Lang, nick, fp string, store *players.Store, r *lipgloss.Renderer) welcomeModel {
@@ -159,9 +160,20 @@ func (m welcomeModel) updateNickname(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m welcomeModel) updateMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.confirmQuit {
+		switch msg.String() {
+		case "y", "e", "enter", "ctrl+c":
+			return m, tea.Quit
+		default: // any other key cancels
+			m.confirmQuit = false
+		}
+		return m, nil
+	}
 	switch msg.String() {
-	case "ctrl+c", "q":
+	case "ctrl+c":
 		return m, tea.Quit
+	case "q":
+		m.confirmQuit = true
 	case "up", "k":
 		if m.cursor > 0 {
 			m.cursor--

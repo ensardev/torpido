@@ -187,3 +187,10 @@ func (r *Room) resetMatchLocked() {
 		r.match.FinishPlacing(game.SideB)
 	}
 }
+
+// resetSeriesLocked returns the room to a fresh waiting state with the score
+// wiped — used when a player is left alone so a new opponent can start over.
+func (r *Room) resetSeriesLocked() {
+	r.resetMatchLocked()
+	r.score = [2]int{}
+}

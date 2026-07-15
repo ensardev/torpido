@@ -145,6 +145,11 @@ func (l *Lobby) Leave(r *Room, seat *Seat) {
 	}
 	humans := r.humanCountLocked()
 	isBot := r.Kind == BotRoom
+	// One human left alone in a human room drops back to a fresh waiting room,
+	// re-listed for a new opponent, with the score wiped.
+	if !isBot && humans == 1 {
+		r.resetSeriesLocked()
+	}
 	r.notifyLocked()
 	r.mu.Unlock()
 

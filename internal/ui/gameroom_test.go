@@ -68,9 +68,9 @@ func TestTwoPlayersTakeTurns(t *testing.T) {
 	}
 }
 
-// TestOpponentForfeitOnLeave checks that when one player leaves, the other is
-// shown as the winner.
-func TestOpponentForfeitOnLeave(t *testing.T) {
+// TestOpponentLeaveReturnsYouToWaiting checks that when the opponent leaves, the
+// remaining player drops back to a fresh waiting room instead of being stuck.
+func TestOpponentLeaveReturnsYouToWaiting(t *testing.T) {
 	l := lobby.New()
 	a := lobby.NewHumanSeat("Ali")
 	room := l.CreateRoom(a, "", false)
@@ -82,11 +82,14 @@ func TestOpponentForfeitOnLeave(t *testing.T) {
 	r := lipgloss.DefaultRenderer()
 	gb := newGameModel(room, b, i18n.For(i18n.EN), r)
 
-	// Ali leaves; Veli refreshes and should see a win.
+	// Ali leaves; Veli refreshes and should return to waiting, score wiped.
 	l.Leave(room, a)
 	updated, _ := gb.Update(roomUpdateMsg{})
 	gb = updated.(gameModel)
-	if gb.phase != gameOver || !gb.snap.YouWon {
-		t.Fatalf("Veli should win by forfeit, got phase=%v won=%v", gb.phase, gb.snap.YouWon)
+	if gb.phase != gameWaiting {
+		t.Fatalf("Veli should return to waiting, got phase=%v", gb.phase)
+	}
+	if gb.snap.YourScore != 0 {
+		t.Fatalf("score should reset after opponent leaves, got %d", gb.snap.YourScore)
 	}
 }

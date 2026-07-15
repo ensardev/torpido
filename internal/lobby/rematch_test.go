@@ -69,20 +69,5 @@ func TestHumanRematchNeedsBothSides(t *testing.T) {
 	}
 }
 
-func TestForfeitScoresRemainingPlayer(t *testing.T) {
-	l := New()
-	a := NewHumanSeat("Ali")
-	room := l.CreateRoom(a, "", false)
-	b := NewHumanSeat("Veli")
-	if _, err := l.JoinByCode(room.Code, b, ""); err != nil {
-		t.Fatal(err)
-	}
-	placeStandardFleet(room, game.SideA)
-	placeStandardFleet(room, game.SideB)
-
-	l.Leave(room, a) // Ali forfeits; Veli (SideB) should win
-
-	if room.score[game.SideB] != 1 {
-		t.Fatalf("the remaining player should score 1 on a forfeit, got %d", room.score[game.SideB])
-	}
-}
+// A bot game that ends is scored for the win; leaving a human alone resets the
+// series (covered in alone_test.go), so there is no forfeit-win to assert here.

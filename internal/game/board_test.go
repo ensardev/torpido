@@ -61,7 +61,7 @@ func TestCanPlaceRejectsOverlap(t *testing.T) {
 }
 
 func TestBotNeverRepeatsAShot(t *testing.T) {
-	bot := NewBot(1)
+	bot := NewBot(Admiral, 1)
 	seen := make(map[Coord]bool)
 	for i := 0; i < BoardSize*BoardSize; i++ {
 		c := bot.NextShot()

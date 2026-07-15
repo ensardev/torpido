@@ -159,7 +159,7 @@ func (m Model) updatePlacement(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m *Model) startBattle() {
 	m.enemy = game.NewBoard()
 	game.RandomPlacement(m.enemy, m.fleet, m.rng)
-	m.bot = game.NewBot(time.Now().UnixNano())
+	m.bot = game.NewBot(game.Admiral, time.Now().UnixNano())
 	m.phase = phaseBattle
 	m.aim = game.Coord{}
 	m.message = "Muharebe başlasın! İlk atışını yap."
